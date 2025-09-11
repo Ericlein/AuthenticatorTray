@@ -14,9 +14,17 @@ namespace AuthenticatorTray
 {
     static class Program
     {
+        // Responsive scaling system - percentage-based instead of pixel-based
+        private static float _scaleFactor = 1.0f;
+        private static Graphics? _graphics = null;
+        private static Font? _baseFont = null;
+        
         [STAThread]
         static void Main()
         {
+            // Enable DPI awareness for crisp text rendering
+            Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
+            
             // Prevent multiple instances
             using (var mutex = new Mutex(true, "AuthenticatorTrayApp", out bool createdNew))
             {
@@ -30,6 +38,9 @@ namespace AuthenticatorTray
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
+                
+                // Initialize responsive scaling
+                InitializeScaling();
 
                 // Optimize memory usage
                 GC.Collect();
@@ -91,27 +102,92 @@ namespace AuthenticatorTray
             }
         }
 
+        static void InitializeScaling()
+        {
+            // Initialize graphics context for font measurements
+            _graphics = Graphics.FromHwnd(IntPtr.Zero);
+            _baseFont = new Font("Segoe UI", 9, FontStyle.Regular);
+            
+            // Calculate scale factor purely based on DPI for crisp rendering
+            float dpiX = _graphics.DpiX;
+            float dpiY = _graphics.DpiY;
+            float baseDpi = 96f; // Standard Windows DPI
+            float dpiScale = Math.Max(dpiX, dpiY) / baseDpi;
+            
+            // Snap to clean DPI scaling values for sharpness
+            if (dpiScale >= 2.25f) _scaleFactor = 2.5f;        // 250%
+            else if (dpiScale >= 1.875f) _scaleFactor = 2.0f;  // 200%
+            else if (dpiScale >= 1.375f) _scaleFactor = 1.5f;  // 150%
+            else if (dpiScale >= 1.125f) _scaleFactor = 1.25f; // 125%
+            else _scaleFactor = 1.0f;                          // 100%
+        }
+        
+        // Helper methods for responsive scaling using relative units
+        public static int ScaleValue(int value) => (int)(value * _scaleFactor);
+        public static float ScaleValue(float value) => value * _scaleFactor;
+        
+        // Font-based measurements (like CSS em units)
+        public static int Em(float multiplier) 
+        {
+            if (_graphics == null || _baseFont == null) return (int)(multiplier * 16 * _scaleFactor); // Fallback
+            var size = _graphics.MeasureString("M", _baseFont);
+            return (int)(size.Width * multiplier);
+        }
+        
+        // Screen percentage-based measurements
+        public static int ScreenWidth(double percent)
+        {
+            var screen = Screen.PrimaryScreen?.Bounds ?? new Rectangle(0, 0, 1920, 1080);
+            return (int)(screen.Width * (percent / 100.0));
+        }
+        
+        public static int ScreenHeight(double percent)
+        {
+            var screen = Screen.PrimaryScreen?.Bounds ?? new Rectangle(0, 0, 1920, 1080);
+            return (int)(screen.Height * (percent / 100.0));
+        }
+        
+        public static Font ScaleFont(string fontFamily, float baseSize, FontStyle style = FontStyle.Regular)
+        {
+            // Round font sizes to nearest 0.25 for better rendering
+            float scaledSize = ScaleValue(baseSize);
+            float roundedSize = Math.Max(6.0f, (float)Math.Round(scaledSize * 4) / 4);
+            return new Font(fontFamily, roundedSize, style);
+        }
+        
+        public static Size ScaleSize(Size size) => new Size(ScaleValue(size.Width), ScaleValue(size.Height));
+        public static Point ScalePoint(Point point) => new Point(ScaleValue(point.X), ScaleValue(point.Y));
+        public static Rectangle ScaleRectangle(Rectangle rect) => new Rectangle(ScaleValue(rect.X), ScaleValue(rect.Y), ScaleValue(rect.Width), ScaleValue(rect.Height));
+        public static Padding ScalePadding(Padding padding) => new Padding(ScaleValue(padding.Left), ScaleValue(padding.Top), ScaleValue(padding.Right), ScaleValue(padding.Bottom));
+
         static void ShowPopup()
         {
             var accounts = LoadAccounts();
 
-            // Create custom form with subtle gray/white colors - no taskbar icon
+            // Create custom form with relative sizing (no hardcoded pixels!)
             ModernPopupForm popup = new ModernPopupForm
             {
                 FormBorderStyle = FormBorderStyle.None,
                 StartPosition = FormStartPosition.Manual,
                 BackColor = Color.FromArgb(250, 250, 250), // Very subtle off-white
                 TopMost = true,
-                Width = 320, // Narrower, more macOS-like
-                Height = 60 + (accounts.Count * 68), // Fixed height to fit all accounts without scrolling
+                Width = ScreenWidth(22), // 22% of screen width (wider)
+                Height = Em(3.2f) + (accounts.Count * Em(4.6f)) + Em(1.5f), // Height with card spacing
                 ShowInTaskbar = false // Prevent taskbar icon
             };
 
-            // Position more centered while staying near tray area (bottom center-right)
+            // Truly responsive positioning using screen percentages
             Rectangle screen = Screen.FromPoint(Cursor.Position).WorkingArea;
-            int centerX = screen.Left + (screen.Width / 2);
-            int offsetX = centerX + (popup.Width); // A bit more to the right
-            int finalY = screen.Bottom - popup.Height - 20;
+            
+            // Position popup at bottom-right using screen percentages
+            int offsetX = screen.Right - ScreenWidth(12) - popup.Width; // 12% from right edge
+            int finalY = screen.Bottom - ScreenHeight(8) - popup.Height;  // 8% from bottom edge
+            
+            // Ensure popup stays within screen bounds with percentage-based margins
+            int marginX = ScreenWidth(1); // 1% screen width margin
+            int marginY = ScreenHeight(1); // 1% screen height margin
+            offsetX = Math.Max(screen.Left + marginX, Math.Min(offsetX, screen.Right - popup.Width - marginX));
+            finalY = Math.Max(screen.Top + marginY, Math.Min(finalY, screen.Bottom - popup.Height - marginY));
             
             // Fast smooth slide-up animation
             popup.Location = new Point(offsetX, screen.Bottom);
@@ -141,10 +217,10 @@ namespace AuthenticatorTray
             };
             slideTimer.Start();
 
-            // Header with subtle gray background
+            // Header with em-based sizing (more compact)
             Panel header = new Panel
             {
-                Height = 44, // macOS standard header height
+                Height = Em(3.2f), // More compact header height
                 Dock = DockStyle.Top,
                 BackColor = Color.FromArgb(248, 248, 248) // Light gray
             };
@@ -161,9 +237,9 @@ namespace AuthenticatorTray
             Label titleLabel = new Label
             {
                 Text = "Eric's super duper secure auth",
-                Font = new Font("Segoe UI", 11, FontStyle.Regular), // Smaller, less bold
+                Font = ScaleFont("Segoe UI", 11, FontStyle.Regular), // Responsive font
                 ForeColor = Color.FromArgb(28, 28, 30), // Fully opaque macOS primary text
-                Location = new Point(16, 14),
+                Location = new Point(Em(1.2f), Em(1.1f)), // Better vertical centering
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
@@ -177,15 +253,15 @@ namespace AuthenticatorTray
                                      initialRemaining <= 10 ? Color.FromArgb(255, 149, 0) :
                                      Color.FromArgb(0, 122, 255);
 
-            // Global timer display in header with correct initial value and color
+            // Global timer display in header with better positioning
             Label globalTimerLabel = new Label
             {
                 Text = $"{initialRemaining}s",
-                Font = new Font("Segoe UI", 10, FontStyle.Regular),
+                Font = ScaleFont("Segoe UI", 10, FontStyle.Regular),
                 ForeColor = initialTimerColor,
-                Location = new Point(280, 14),
-                Size = new Size(30, 16),
-                TextAlign = ContentAlignment.MiddleRight,
+                Location = new Point(popup.Width - Em(3.5f), Em(1.1f)), // Better positioning
+                Size = new Size(Em(3f), Em(1.4f)), // Wider to ensure visibility
+                TextAlign = ContentAlignment.MiddleCenter, // Center the text
                 BackColor = Color.Transparent
             };
 
@@ -193,19 +269,20 @@ namespace AuthenticatorTray
             header.Controls.Add(globalTimerLabel);
             popup.Controls.Add(header);
 
-            // Main content panel with subtle white
+            // Main content panel with responsive sizing
             Panel contentPanel = new Panel
             {
-                Location = new Point(0, 44),
-                Size = new Size(popup.Width, popup.Height - 44),
+                Location = new Point(0, Em(3.2f)),
+                Size = new Size(popup.Width, popup.Height - Em(3.2f)),
                 BackColor = Color.FromArgb(250, 250, 250) // Very subtle off-white
             };
 
-            // Inner panel with clean background
+            // Inner panel with responsive margins
+            int panelMargin = Em(0.8f);
             Panel scrollPanel = new Panel
             {
-                Location = new Point(12, 8), // Equal left/right margins
-                Size = new Size(contentPanel.Width - 24, contentPanel.Height - 16), // Full width minus equal margins
+                Location = new Point(panelMargin, Em(0.6f)),
+                Size = new Size(contentPanel.Width - (panelMargin * 2), contentPanel.Height - Em(1.2f)),
                 AutoScroll = false, // No scrollbar
                 BackColor = Color.FromArgb(250, 250, 250) // Very subtle off-white
             };
@@ -222,23 +299,24 @@ namespace AuthenticatorTray
                 string name = kvp.Key;
                 Account acc = kvp.Value;
 
-                // Create macOS-style card with clean colors
+                // Create responsive macOS-style card
+                int cardMargin = Em(0.3f);
                 Panel accountCard = new MacCard
                 {
-                    Size = new Size(scrollPanel.Width - 8, 60), // Full width with minimal margins
-                    Location = new Point(4, yPosition), // Small left margin
+                    Size = new Size(scrollPanel.Width - Em(0.6f), Em(4.2f)), // More compact card size
+                    Location = new Point(cardMargin, yPosition), // Scaled margin
                     BackColor = Color.FromArgb(245, 245, 245), // Light gray for cards
                     Cursor = Cursors.Hand
                 };
 
-                // Account name - darker and more visible
+                // Account name with better vertical centering
                 Label nameLabel = new Label
                 {
                     Text = GetDisplayName(name),
-                    Font = new Font("Segoe UI", 9, FontStyle.Regular), // Smaller font
+                    Font = ScaleFont("Segoe UI", 9, FontStyle.Regular), // Responsive font
                     ForeColor = Color.FromArgb(60, 60, 67), // Much darker for better visibility
-                    Location = new Point(12, 10),
-                    Size = new Size(180, 14),
+                    Location = new Point(Em(0.8f), Em(0.5f)), // Higher position
+                    Size = new Size(Em(12f), Em(1.2f)),
                     TextAlign = ContentAlignment.MiddleLeft,
                     BackColor = Color.Transparent
                 };
@@ -249,28 +327,28 @@ namespace AuthenticatorTray
                 string formattedInitialCode = initialCode.Length == 6 ? 
                     $"{initialCode.Substring(0, 3)} {initialCode.Substring(3, 3)}" : initialCode;
 
-                // TOTP code - refined sizing with real code from start
+                // TOTP code with better vertical centering
                 Label codeLabel = new Label
                 {
                     Text = formattedInitialCode, // Show real code immediately
-                    Font = new Font("SF Mono", 16, FontStyle.Regular), // Slightly smaller, medium weight
+                    Font = ScaleFont("SF Mono", 16, FontStyle.Regular), // Responsive monospace font
                     ForeColor = Color.FromArgb(0, 122, 255), // Fully opaque macOS accent blue
-                    Location = new Point(12, 28),
-                    Size = new Size(120, 22),
+                    Location = new Point(Em(0.8f), Em(2.0f)), // Better centered position
+                    Size = new Size(Em(8f), Em(1.8f)),
                     TextAlign = ContentAlignment.MiddleLeft,
                     BackColor = Color.Transparent
                 };
 
                 // Removed individual time label and progress bar - using global timer in header instead
 
-                // Copy button with icon - positioned relative to card width
+                // Copy button with centered positioning
                 Label copyButton = new Label
                 {
                     Text = "📋", // Clipboard icon
-                    Font = new Font("Segoe UI Emoji", 14, FontStyle.Regular),
+                    Font = ScaleFont("Segoe UI Emoji", 14, FontStyle.Regular),
                     ForeColor = Color.FromArgb(0, 122, 255), // Fully opaque blue
-                    Location = new Point(accountCard.Width - 35, 25), // 35px from right edge
-                    Size = new Size(25, 25),
+                    Location = new Point(accountCard.Width - Em(2.5f), Em(1.4f)), // Vertically centered
+                    Size = new Size(Em(2f), Em(2f)),
                     TextAlign = ContentAlignment.MiddleCenter,
                     Cursor = Cursors.Hand,
                     BackColor = Color.Transparent
@@ -330,7 +408,7 @@ namespace AuthenticatorTray
                 scrollPanel.Controls.Add(accountCard);
                 controls[name] = codeLabel;
 
-                yPosition += 64; // Adjusted spacing between cards
+                yPosition += Em(4.6f); // Add gap between cards (4.2f card + 0.4f spacing)
             }
 
             // Single update timer - reduced frequency for efficiency
@@ -427,16 +505,16 @@ namespace AuthenticatorTray
             Label tooltip = new Label
             {
                 Text = "Copied",
-                Font = new Font("Segoe UI", 8, FontStyle.Regular),
+                Font = ScaleFont("Segoe UI", 8, FontStyle.Regular),
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(80, 80, 80), // Subtle dark tooltip
                 AutoSize = true,
-                Padding = new Padding(4, 2, 4, 2) // Minimal padding
+                Padding = new Padding(Em(0.3f), Em(0.15f), Em(0.3f), Em(0.15f)) // Responsive padding in em
             };
 
             Point loc = nearControl.PointToScreen(Point.Empty);
             loc = parent.PointToClient(loc);
-            tooltip.Location = new Point(loc.X + nearControl.Width / 2 - 20, loc.Y - 20);
+            tooltip.Location = new Point(loc.X + nearControl.Width / 2 - Em(1.5f), loc.Y - Em(1.5f));
 
             parent.Controls.Add(tooltip);
             tooltip.BringToFront();
@@ -556,8 +634,9 @@ namespace AuthenticatorTray
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            // Apply rounded corners to the window
-            this.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, 12, 12));
+            // Apply responsive rounded corners using em units
+            int cornerRadius = Program.Em(0.8f);
+            this.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, cornerRadius, cornerRadius));
         }
 
         [System.Runtime.InteropServices.DllImport("Gdi32.dll", EntryPoint = "CreateRoundRectRgn")]
@@ -567,8 +646,9 @@ namespace AuthenticatorTray
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            // Update region when window is resized
-            this.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, 12, 12));
+            // Update region when window is resized using em units
+            int cornerRadius = Program.Em(0.8f);
+            this.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, cornerRadius, cornerRadius));
         }
 
         protected override void OnPaint(PaintEventArgs e)
