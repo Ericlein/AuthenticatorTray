@@ -1,0 +1,16 @@
+{
+  "accounts": [
+    {
+      "name": "Name of account (Name of account / user)",
+      "secret": "Secret value",
+      "digits": 6,
+      "algorithm": "SHA1"
+    },
+    {
+      "name": "Blizzard (mysupercoolusername)",
+      "secret": "Secret value",
+      "digits": 6,
+      "algorithm": "SHA1"
+    }
+  ]
+}
