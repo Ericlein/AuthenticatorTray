@@ -52,7 +52,7 @@ Welcome to the most "enterprise-grade" 2FA authenticator you've ever seen! This 
 
 1. Navigate to the C# project directory:
    ```bash
-   cd csharp-tray/AuthenticatorTray
+   cd AuthenticatorTray
    ```
 
 2. Build the project:
