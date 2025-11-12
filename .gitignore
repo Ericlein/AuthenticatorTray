@@ -1,3 +1,9 @@
 bin/
 obj/
 accounts.json
+updated_accounts.json
+img.png
+__pycache__/
+*.pyc
+auth_migration_pb2.py
+trays/
