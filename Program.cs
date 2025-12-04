@@ -693,7 +693,6 @@ namespace AuthenticatorTray
                         accountName = parts[1];
                     }
                 }
-                // Build display name
                 string displayName;
                 if (!string.IsNullOrEmpty(issuer) && !string.IsNullOrEmpty(accountName))
                 {
@@ -711,13 +710,11 @@ namespace AuthenticatorTray
                 {
                     displayName = "Unknown";
                 }
-                // Get algorithm (default SHA1)
                 string algorithm = queryParams.TryGetValue("algorithm", out string? algValue) ? algValue.ToUpper() : "SHA1";
                 if (algorithm != "SHA1" && algorithm != "SHA256" && algorithm != "SHA512" && algorithm != "MD5")
                 {
                     algorithm = "SHA1";
                 }
-                // Get digits (default 6)
                 int digits = 6;
                 if (queryParams.TryGetValue("digits", out string? digitsValue))
                 {
@@ -741,14 +738,12 @@ namespace AuthenticatorTray
         }
         static string GetAccountsJsonPath()
         {
-            // Get the application directory (where the executable is)
             string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
             return Path.Combine(appDirectory, "accounts.json");
         }
         public static Dictionary<string, Account> LoadAccounts()
         {
             string accountsPath = GetAccountsJsonPath();
-            // Try loading from file first
             if (File.Exists(accountsPath))
             {
                 try
@@ -776,7 +771,6 @@ namespace AuthenticatorTray
                         "Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
-            // Fallback to embedded resource
             try
             {
                 var assembly = Assembly.GetExecutingAssembly();
@@ -811,7 +805,6 @@ namespace AuthenticatorTray
                 MessageBox.Show($"Error loading accounts: {ex.Message}\nUsing empty accounts.", 
                     "Loading Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
-            // Return empty dictionary if JSON loading fails
             return new Dictionary<string, Account>();
         }
         public static void SaveAccounts(Dictionary<string, Account> accounts)
@@ -849,7 +842,6 @@ namespace AuthenticatorTray
         public int Digits { get; set; } = 6;
         public string Algorithm { get; set; } = "SHA1";
     }
-    // JSON classes for deserialization
     public class AccountsRoot
     {
         [JsonPropertyName("accounts")]
@@ -866,7 +858,6 @@ namespace AuthenticatorTray
         [JsonPropertyName("algorithm")]
         public string Algorithm { get; set; } = "SHA1";
     }
-    // Settings dialog form for adding new accounts
     public class SettingsForm : Form
     {
         private TextBox? nameTextBox;
@@ -891,7 +882,6 @@ namespace AuthenticatorTray
             this.Height = Program.Em(28f); // Increased for more fields
             this.TopMost = true;
             this.ShowInTaskbar = false;
-            // Header
             Panel header = new Panel
             {
                 Height = Program.Em(3.5f),
@@ -909,14 +899,12 @@ namespace AuthenticatorTray
             };
             header.Controls.Add(titleLabel);
             this.Controls.Add(header);
-            // Content panel
             Panel contentPanel = new Panel
             {
                 Location = new Point(0, Program.Em(3.5f)),
                 Size = new Size(this.Width, this.Height - Program.Em(3.5f)),
                 BackColor = Color.FromArgb(250, 250, 250)
             };
-            // Scan QR Code button
             Button scanButton = new Button
             {
                 Text = "📷 Scan QR Code from Image",
@@ -930,13 +918,11 @@ namespace AuthenticatorTray
             };
             scanButton.FlatAppearance.BorderSize = 0;
             scanButton.Click += ScanButton_Click;
-            // Editable fields for account info
             int fieldY = Program.Em(5.5f);
             int fieldHeight = Program.Em(2.5f);
             int fieldSpacing = Program.Em(2.8f);
             int labelWidth = Program.Em(6f);
             int fieldWidth = this.Width - Program.Em(3f) - labelWidth - Program.Em(1f);
-            // Name field
             Label nameLabel = new Label
             {
                 Text = "Name:",
@@ -954,7 +940,6 @@ namespace AuthenticatorTray
                 PlaceholderText = "Account name",
                 Enabled = false
             };
-            // Secret field
             fieldY += fieldSpacing;
             Label secretLabel = new Label
             {
@@ -973,7 +958,6 @@ namespace AuthenticatorTray
                 PlaceholderText = "Base32 secret key",
                 Enabled = false
             };
-            // Digits field
             fieldY += fieldSpacing;
             Label digitsLabel = new Label
             {
@@ -992,7 +976,6 @@ namespace AuthenticatorTray
                 PlaceholderText = "6",
                 Enabled = false
             };
-            // Algorithm field
             fieldY += fieldSpacing;
             Label algorithmLabel = new Label
             {
@@ -1011,7 +994,6 @@ namespace AuthenticatorTray
                 PlaceholderText = "SHA1",
                 Enabled = false
             };
-            // Add Account button
             fieldY += fieldSpacing + Program.Em(1f);
             addButton = new Button
             {
@@ -1027,7 +1009,6 @@ namespace AuthenticatorTray
             };
             addButton.FlatAppearance.BorderSize = 0;
             addButton.Click += AddButton_Click;
-            // Cancel button
             Button cancelButton = new Button
             {
                 Text = "Cancel",
@@ -1041,7 +1022,6 @@ namespace AuthenticatorTray
             };
             cancelButton.FlatAppearance.BorderSize = 0;
             cancelButton.Click += (s, e) => this.Close();
-            // Add all controls
             contentPanel.Controls.Add(scanButton);
             contentPanel.Controls.Add(nameLabel);
             contentPanel.Controls.Add(nameTextBox);
@@ -1054,7 +1034,6 @@ namespace AuthenticatorTray
             contentPanel.Controls.Add(addButton);
             contentPanel.Controls.Add(cancelButton);
             this.Controls.Add(contentPanel);
-            // Hover effects
             scanButton.MouseEnter += (s, e) => scanButton.BackColor = Color.FromArgb(0, 100, 200);
             scanButton.MouseLeave += (s, e) => scanButton.BackColor = Color.FromArgb(0, 122, 255);
             addButton.MouseEnter += (s, e) => { if (addButton.Enabled) addButton.BackColor = Color.FromArgb(40, 180, 70); };
@@ -1072,9 +1051,7 @@ namespace AuthenticatorTray
                 {
                     try
                     {
-                        // Decode directly from the selected file
                         string selectedImagePath = dialog.FileName;
-                        // Load and validate the image first
                         using (var testImage = new Bitmap(selectedImagePath))
                         {
                             string debugInfo = $"Image loaded successfully:\n" +
@@ -1105,7 +1082,6 @@ namespace AuthenticatorTray
                             return;
                         }
                         pendingAccount = account;
-                        // Populate the editable fields
                         if (nameTextBox != null)
                         {
                             nameTextBox.Text = account.Name;
@@ -1126,7 +1102,6 @@ namespace AuthenticatorTray
                             algorithmTextBox.Text = account.Algorithm;
                             algorithmTextBox.Enabled = true;
                         }
-                        // Enable Add Account button
                         if (addButton != null)
                         {
                             addButton.Enabled = true;
@@ -1148,12 +1123,10 @@ namespace AuthenticatorTray
         }
         private void AddButton_Click(object? sender, EventArgs e)
         {
-            // Read values from TextBoxes
             string name = nameTextBox?.Text?.Trim() ?? "";
             string secret = secretTextBox?.Text?.Trim() ?? "";
             string digitsStr = digitsTextBox?.Text?.Trim() ?? "6";
             string algorithm = algorithmTextBox?.Text?.Trim()?.ToUpper() ?? "SHA1";
-            // Validate inputs
             if (string.IsNullOrWhiteSpace(name))
             {
                 MessageBox.Show("Please enter an account name.", "Validation Error",
@@ -1181,7 +1154,6 @@ namespace AuthenticatorTray
             try
             {
                 var accounts = Program.LoadAccounts();
-                // Check for duplicate
                 if (accounts.ContainsKey(name))
                 {
                     var result = MessageBox.Show(
@@ -1194,25 +1166,21 @@ namespace AuthenticatorTray
                         return;
                     }
                 }
-                // Add account
                 accounts[name] = new Account
                 {
                     Secret = secret,
                     Digits = digits,
                     Algorithm = algorithm
                 };
-                // Save accounts
                 Program.SaveAccounts(accounts);
                 MessageBox.Show($"Account '{name}' added successfully!", "Success",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
-                // Close this dialog and parent popup, then reopen popup
                 this.DialogResult = DialogResult.OK;
                 if (parentPopup != null)
                 {
                     parentPopup.Close();
                 }
                 this.Close();
-                // Reopen popup to show new account
                 Program.ShowPopup();
             }
             catch (Exception ex)
@@ -1224,7 +1192,6 @@ namespace AuthenticatorTray
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            // Subtle macOS shadow
             for (int i = 3; i >= 0; i--)
             {
                 using (var shadowBrush = new SolidBrush(Color.FromArgb(8 + (i * 3), 0, 0, 0)))
@@ -1233,12 +1200,10 @@ namespace AuthenticatorTray
                         new Rectangle(i + 1, i + 1, Width - (i * 2) - 1, Height - (i * 2) - 1), 8);
                 }
             }
-            // Main form background
             using (var formBrush = new SolidBrush(BackColor))
             {
                 e.Graphics.FillRoundedRectangle(formBrush, new Rectangle(0, 0, Width - 6, Height - 6), 8);
             }
-            // Very subtle border
             using (var borderPen = new Pen(Color.FromArgb(220, 220, 220), 0.5f))
             {
                 e.Graphics.DrawRoundedRectangle(borderPen, new Rectangle(0, 0, Width - 6, Height - 6), 8);
@@ -1257,7 +1222,6 @@ namespace AuthenticatorTray
             this.Region = Region.FromHrgn(ModernPopupForm.CreateRoundRectRgn(0, 0, this.Width, this.Height, cornerRadius, cornerRadius));
         }
     }
-    // Refined macOS-style popup form with rounded corners
     public class ModernPopupForm : Form
     {
         public ModernPopupForm()
@@ -1277,7 +1241,6 @@ namespace AuthenticatorTray
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            // Apply responsive rounded corners using em units
             int cornerRadius = Program.Em(0.8f);
             this.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, cornerRadius, cornerRadius));
         }
@@ -1287,14 +1250,12 @@ namespace AuthenticatorTray
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            // Update region when window is resized using em units
             int cornerRadius = Program.Em(0.8f);
             this.Region = Region.FromHrgn(CreateRoundRectRgn(0, 0, this.Width, this.Height, cornerRadius, cornerRadius));
         }
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            // Subtle macOS shadow
             for (int i = 3; i >= 0; i--)
             {
                 using (var shadowBrush = new SolidBrush(Color.FromArgb(8 + (i * 3), 0, 0, 0)))
@@ -1303,19 +1264,16 @@ namespace AuthenticatorTray
                         new Rectangle(i + 1, i + 1, Width - (i * 2) - 1, Height - (i * 2) - 1), 8);
                 }
             }
-            // Main form background - pure white
             using (var formBrush = new SolidBrush(BackColor))
             {
                 e.Graphics.FillRoundedRectangle(formBrush, new Rectangle(0, 0, Width - 6, Height - 6), 8);
             }
-            // Very subtle border
             using (var borderPen = new Pen(Color.FromArgb(220, 220, 220), 0.5f))
             {
                 e.Graphics.DrawRoundedRectangle(borderPen, new Rectangle(0, 0, Width - 6, Height - 6), 8);
             }
         }
     }
-    // Minimal macOS-style card
     public class MacCard : Panel
     {
         public MacCard()
@@ -1326,13 +1284,11 @@ namespace AuthenticatorTray
         protected override void OnPaint(PaintEventArgs e)
         {
             e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            // Card background with rounded corners
             using (var brush = new SolidBrush(BackColor))
             {
                 e.Graphics.FillRoundedRectangle(brush, 
                     new Rectangle(0, 0, Width - 1, Height - 1), 4);
             }
-            // Subtle border only
             using (var borderPen = new Pen(Color.FromArgb(235, 235, 235), 0.5f))
             {
                 e.Graphics.DrawRoundedRectangle(borderPen, 
@@ -1340,7 +1296,6 @@ namespace AuthenticatorTray
             }
         }
     }
-    // Extension methods for rounded rectangles
     public static class GraphicsExtensions
     {
         public static void FillRoundedRectangle(this Graphics graphics, Brush brush, Rectangle bounds, int radius)
