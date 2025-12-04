@@ -8,7 +8,7 @@ Welcome to the most "enterprise-grade" 2FA authenticator you've ever seen! This 
 
 ## Features That Will Make You Question Everything
 
-- ✨ **Single-file architecture** - Exactly 1382 lines of pure, unadulterated chaos in one massive Program.cs!
+- ✨ **Single-file architecture** - Exactly 1337 lines of pure, unadulterated chaos in one massive Program.cs!
 - 🎨 **"Modern" UI** - Rounded corners! Subtle shadows! It's basically the next macOS!
 - 📱 **Actually Responsive Design** - Uses em units and screen percentages like a real web developer!
 - 🔒 **Security First** - All your secrets are safely embedded as resources (what could go wrong?)
