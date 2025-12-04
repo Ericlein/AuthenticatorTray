@@ -24,12 +24,10 @@ namespace AuthenticatorTray
         {
             // Enable DPI awareness for crisp text rendering
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
-            // Prevent multiple instances
             using (var mutex = new Mutex(true, "AuthenticatorTrayApp", out bool createdNew))
             {
                 if (!createdNew)
                 {
-                    // Another instance is already running
                     MessageBox.Show("Authenticator is already running in the system tray.", "Already Running",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
@@ -38,13 +36,11 @@ namespace AuthenticatorTray
                 Application.SetCompatibleTextRenderingDefault(false);
                 // Initialize responsive scaling
                 InitializeScaling();
-                // Optimize memory usage
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 Icon appIcon;
             try
             {
-                // Load icon from embedded resources
                 var assembly = Assembly.GetExecutingAssembly();
                 using (var stream = assembly.GetManifestResourceStream("AuthenticatorTray.authenticator_icon.ico"))
                 {
@@ -205,9 +201,9 @@ namespace AuthenticatorTray
             Label titleLabel = new Label
             {
                 Text = "Eric's super duper secure auth",
-                Font = ScaleFont("Segoe UI", 11, FontStyle.Regular), // Responsive font
+                Font = ScaleFont("Segoe UI", 12, FontStyle.Regular), // Responsive font
                 ForeColor = Color.FromArgb(28, 28, 30), // Fully opaque macOS primary text
-                Location = new Point(Em(1.2f), Em(1.1f)), // Better vertical centering
+                Location = new Point(0, Em(0.8f)), // Will be centered after adding to header
                 AutoSize = true,
                 BackColor = Color.Transparent
             };
@@ -218,14 +214,14 @@ namespace AuthenticatorTray
             Color initialTimerColor = initialRemaining <= 5 ? Color.FromArgb(255, 59, 48) :
                                      initialRemaining <= 10 ? Color.FromArgb(255, 149, 0) :
                                      Color.FromArgb(0, 122, 255);
-            // Settings icon
+            // Settings icon - positioned on the left
             Label settingsIcon = new Label
             {
                 Text = "⚙️",
-                Font = ScaleFont("Segoe UI Emoji", 14, FontStyle.Regular),
+                Font = ScaleFont("Segoe UI Emoji", 12, FontStyle.Regular),
                 ForeColor = Color.FromArgb(0, 122, 255),
-                Location = new Point(popup.Width - Em(7.5f), Em(1.0f)),
-                Size = new Size(Em(1.8f), Em(1.8f)),
+                Location = new Point(Em(0.8f), Em(0.8f)), // Left side, keeping vertical position
+                Size = new Size(Em(2f), Em(2f)), // Keeping size
                 TextAlign = ContentAlignment.MiddleCenter,
                 Cursor = Cursors.Hand,
                 BackColor = Color.Transparent
@@ -249,16 +245,20 @@ namespace AuthenticatorTray
             Label globalTimerLabel = new Label
             {
                 Text = $"{initialRemaining}s",
-                Font = ScaleFont("Segoe UI", 10, FontStyle.Regular),
+                Font = ScaleFont("Segoe UI", 12, FontStyle.Regular),
                 ForeColor = initialTimerColor,
-                Location = new Point(popup.Width - Em(3.5f), Em(1.1f)), // Better positioning
-                Size = new Size(Em(3f), Em(1.4f)), // Wider to ensure visibility
+                Location = new Point(popup.Width - Em(3.5f), Em(0.8f)), // Better positioning
+                Size = new Size(Em(3f), Em(2f)), // Wider to ensure visibility
                 TextAlign = ContentAlignment.MiddleCenter, // Center the text
                 BackColor = Color.Transparent
             };
-            header.Controls.Add(titleLabel);
             header.Controls.Add(settingsIcon);
+            header.Controls.Add(titleLabel);
             header.Controls.Add(globalTimerLabel);
+            
+            // Center the title text after it's been added (so AutoSize has calculated the width)
+            titleLabel.Location = new Point((popup.Width - titleLabel.Width) / 2, Em(0.8f));
+            
             popup.Controls.Add(header);
             // Main content panel with responsive sizing
             Panel contentPanel = new Panel
