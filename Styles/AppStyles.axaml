@@ -1,0 +1,84 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- Account card style -->
+    <Style Selector="Border.account-card">
+        <Setter Property="Background" Value="#F5F5F5" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="12 10" />
+        <Setter Property="Margin" Value="0 3" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="BorderBrush" Value="#EBEBEB" />
+        <Setter Property="BorderThickness" Value="0.5" />
+    </Style>
+    <Style Selector="Border.account-card:pointerover">
+        <Setter Property="Background" Value="#E6EBF0" />
+    </Style>
+
+    <!-- Copy icon style -->
+    <Style Selector="TextBlock.copy-icon">
+        <Setter Property="Foreground" Value="#007AFF" />
+        <Setter Property="FontSize" Value="18" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Border.account-card:pointerover TextBlock.copy-icon">
+        <Setter Property="Foreground" Value="#0050B4" />
+    </Style>
+
+    <!-- Settings button -->
+    <Style Selector="Button.settings-btn">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="4" />
+        <Setter Property="Cursor" Value="Hand" />
+    </Style>
+    <Style Selector="Button.settings-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
+    <!-- Primary button (blue) -->
+    <Style Selector="Button.primary-btn">
+        <Setter Property="Background" Value="#007AFF" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="16 10" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.primary-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#0064C8" />
+    </Style>
+
+    <!-- Success button (green) -->
+    <Style Selector="Button.success-btn">
+        <Setter Property="Background" Value="#34C759" />
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="16 10" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.success-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#28B446" />
+    </Style>
+    <Style Selector="Button.success-btn:disabled /template/ ContentPresenter">
+        <Setter Property="Background" Value="#A8A8A8" />
+    </Style>
+
+    <!-- Cancel button -->
+    <Style Selector="Button.cancel-btn">
+        <Setter Property="Background" Value="#F5F5F5" />
+        <Setter Property="Foreground" Value="#3C3C43" />
+        <Setter Property="CornerRadius" Value="6" />
+        <Setter Property="Padding" Value="16 10" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.cancel-btn:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="#E6E6E6" />
+    </Style>
+
+</Styles>

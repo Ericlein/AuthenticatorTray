@@ -1,0 +1,107 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AuthenticatorTray.ViewModels"
+        x:Class="AuthenticatorTray.Views.SettingsWindow"
+        x:DataType="vm:SettingsViewModel"
+        Title="Add 2FA Account"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        CanResize="False"
+        Width="380"
+        SizeToContent="Height"
+        Topmost="True"
+        WindowStartupLocation="CenterOwner">
+
+    <Border CornerRadius="10"
+            Background="#FAFAFA"
+            BorderBrush="#E0E0E0"
+            BorderThickness="0.5"
+            BoxShadow="0 4 16 0 #40000000"
+            ClipToBounds="True"
+            Padding="0">
+        <StackPanel>
+            <!-- Header -->
+            <Border Background="#F8F8F8"
+                    BorderBrush="#F0F0F0"
+                    BorderThickness="0 0 0 1"
+                    Padding="20 14">
+                <TextBlock Text="Add 2FA Account"
+                           FontSize="15"
+                           FontWeight="Normal"
+                           Foreground="#1C1C1E" />
+            </Border>
+
+            <StackPanel Margin="20 16 20 20" Spacing="14">
+                <!-- Scan QR button -->
+                <Button Classes="primary-btn"
+                        Command="{Binding ScanQrCodeCommand}"
+                        HorizontalAlignment="Stretch">
+                    <TextBlock Text="&#x1F4F7; Scan QR Code from Image" />
+                </Button>
+
+                <!-- Status message -->
+                <TextBlock Text="{Binding StatusMessage}"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <TextBlock.Styles>
+                        <Style Selector="TextBlock">
+                            <Setter Property="Foreground" Value="#34C759" />
+                        </Style>
+                    </TextBlock.Styles>
+                </TextBlock>
+
+                <!-- Form fields -->
+                <StackPanel Spacing="10">
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Name" FontSize="12" Foreground="#3C3C43" />
+                        <TextBox Text="{Binding Name}"
+                                 Watermark="Account name"
+                                 IsEnabled="{Binding FieldsEnabled}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="Secret" FontSize="12" Foreground="#3C3C43" />
+                        <TextBox Text="{Binding Secret}"
+                                 Watermark="Base32 secret key"
+                                 IsEnabled="{Binding FieldsEnabled}" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,16,*">
+                        <StackPanel Grid.Column="0" Spacing="4">
+                            <TextBlock Text="Digits" FontSize="12" Foreground="#3C3C43" />
+                            <TextBox Text="{Binding Digits}"
+                                     Watermark="6"
+                                     IsEnabled="{Binding FieldsEnabled}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="2" Spacing="4">
+                            <TextBlock Text="Algorithm" FontSize="12" Foreground="#3C3C43" />
+                            <TextBox Text="{Binding Algorithm}"
+                                     Watermark="SHA1"
+                                     IsEnabled="{Binding FieldsEnabled}" />
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+
+                <!-- Buttons -->
+                <Grid ColumnDefinitions="*,12,*" Margin="0 6 0 0">
+                    <Button Grid.Column="0"
+                            Classes="success-btn"
+                            Command="{Binding AddAccountCommand}"
+                            IsEnabled="{Binding FieldsEnabled}"
+                            HorizontalAlignment="Stretch">
+                        <TextBlock Text="Add Account" HorizontalAlignment="Center" />
+                    </Button>
+                    <Button Grid.Column="2"
+                            Classes="cancel-btn"
+                            Click="CancelButton_Click"
+                            HorizontalAlignment="Stretch">
+                        <TextBlock Text="Cancel" HorizontalAlignment="Center" />
+                    </Button>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
