@@ -1,0 +1,99 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:AuthenticatorTray.ViewModels"
+        x:Class="AuthenticatorTray.Views.PopupWindow"
+        x:DataType="vm:PopupViewModel"
+        Title="Authenticator"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent"
+        ShowInTaskbar="False"
+        CanResize="False"
+        SizeToContent="Height"
+        Topmost="True">
+
+    <Border CornerRadius="10"
+            Background="#FAFAFA"
+            BorderBrush="#E0E0E0"
+            BorderThickness="0.5"
+            BoxShadow="0 4 16 0 #40000000"
+            ClipToBounds="True">
+        <DockPanel>
+            <!-- Header -->
+            <Border DockPanel.Dock="Top"
+                    Background="#F8F8F8"
+                    BorderBrush="#F0F0F0"
+                    BorderThickness="0 0 0 1"
+                    Padding="12 10">
+                <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- Settings gear -->
+                    <Button Grid.Column="0"
+                            Classes="settings-btn"
+                            Command="{Binding OpenSettingsCommand}">
+                        <TextBlock Text="&#x2699;&#xFE0F;"
+                                   FontSize="16"
+                                   Foreground="#007AFF" />
+                    </Button>
+
+                    <!-- Title -->
+                    <TextBlock Grid.Column="1"
+                               Text="Eric's super duper secure auth"
+                               FontSize="13"
+                               FontWeight="Normal"
+                               Foreground="#1C1C1E"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Center" />
+
+                    <!-- Timer -->
+                    <TextBlock Grid.Column="2"
+                               Text="{Binding TimerText}"
+                               FontSize="13"
+                               Foreground="{Binding TimerColor}"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               MinWidth="30"
+                               TextAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- Account list -->
+            <ScrollViewer x:Name="AccountScroller"
+                          DockPanel.Dock="Bottom"
+                          Padding="10 8 10 0">
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding Accounts}">
+                        <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AccountCardViewModel">
+                            <Border Classes="account-card"
+                                    PointerPressed="AccountCard_PointerPressed">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <TextBlock Text="{Binding DisplayName}"
+                                                   FontSize="12"
+                                                   Foreground="#3C3C43" />
+                                        <TextBlock Text="{Binding Code}"
+                                                   FontSize="20"
+                                                   FontFamily="Cascadia Mono, JetBrains Mono, Consolas, Menlo, monospace"
+                                                   Foreground="#007AFF" />
+                                    </StackPanel>
+                                    <Panel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Classes="copy-icon"
+                                                   Text="&#x1F4CB;"
+                                                   IsVisible="{Binding !IsCopied}" />
+                                        <TextBlock Classes="copy-icon"
+                                                   Text="&#x2705;"
+                                                   Foreground="#34C759"
+                                                   IsVisible="{Binding IsCopied}" />
+                                    </Panel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- Footer spacer so last card isn't clipped -->
+                    <Border Height="12" />
+                </StackPanel>
+            </ScrollViewer>
+        </DockPanel>
+    </Border>
+</Window>

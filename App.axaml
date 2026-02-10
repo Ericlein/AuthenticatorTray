@@ -1,0 +1,25 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="AuthenticatorTray.App"
+             RequestedThemeVariant="Light">
+
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://AuthenticatorTray/Styles/AppStyles.axaml" />
+    </Application.Styles>
+
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="avares://AuthenticatorTray/Assets/authenticator_icon.ico"
+                      ToolTipText="Eric's super duper secure auth"
+                      Clicked="TrayIcon_Clicked">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="Exit" Click="ExitMenuItem_Click" />
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
+
+</Application>
