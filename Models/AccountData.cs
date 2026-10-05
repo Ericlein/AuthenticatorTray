@@ -6,7 +6,11 @@ namespace AuthenticatorTray
         public List<string> Folders { get; } = new List<string>();
         public List<string> CollapsedFolders { get; } = new List<string>();
         public bool ReadOnly { get; set; }
-        public string? FindFolder(string name) => Folders.Find(f => string.Equals(f, name.Trim(), StringComparison.OrdinalIgnoreCase));
+        public string? FindFolder(string name)
+        {
+            string trimmed = name.Trim();
+            return Folders.Find(f => string.Equals(f, trimmed, StringComparison.OrdinalIgnoreCase));
+        }
         // Reuses an existing folder when the name only differs in case
         public string AddFolder(string name)
         {

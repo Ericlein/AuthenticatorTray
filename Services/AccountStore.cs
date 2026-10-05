@@ -4,6 +4,7 @@ namespace AuthenticatorTray
 {
     static class AccountStore
     {
+        static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
         static string GetAccountsJsonPath()
         {
             string appDirectory = AppDomain.CurrentDomain.BaseDirectory;
@@ -28,18 +29,13 @@ namespace AuthenticatorTray
             }
             try
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                using (var stream = assembly.GetManifestResourceStream("AuthenticatorTray.accounts.json"))
+                using var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("AuthenticatorTray.accounts.json");
+                if (stream != null)
                 {
-                    if (stream != null)
-                    {
-                        using (var reader = new StreamReader(stream))
-                        {
-                            var data = ParseAccounts(reader.ReadToEnd());
-                            data.ReadOnly = fileUnreadable;
-                            return data;
-                        }
-                    }
+                    using var reader = new StreamReader(stream);
+                    var data = ParseAccounts(reader.ReadToEnd());
+                    data.ReadOnly = fileUnreadable;
+                    return data;
                 }
             }
             catch (Exception ex)
@@ -53,11 +49,11 @@ namespace AuthenticatorTray
         {
             var accountsData = JsonSerializer.Deserialize<AccountsRoot>(json);
             var data = new AccountData();
-            foreach (string folder in accountsData?.Folders ?? new List<string>())
+            foreach (string folder in accountsData?.Folders ?? [])
             {
                 if (!string.IsNullOrWhiteSpace(folder)) data.AddFolder(folder);
             }
-            foreach (var accountJson in accountsData?.Accounts ?? new List<AccountJson>())
+            foreach (var accountJson in accountsData?.Accounts ?? [])
             {
                 data.Accounts[accountJson.Name] = new Account
                 {
@@ -67,7 +63,7 @@ namespace AuthenticatorTray
                     Folder = string.IsNullOrWhiteSpace(accountJson.Folder) ? null : data.AddFolder(accountJson.Folder)
                 };
             }
-            foreach (string collapsed in accountsData?.CollapsedFolders ?? new List<string>())
+            foreach (string collapsed in accountsData?.CollapsedFolders ?? [])
             {
                 string? folder = data.FindFolder(collapsed ?? "");
                 if (folder != null && !data.CollapsedFolders.Contains(folder)) data.CollapsedFolders.Add(folder);
@@ -98,12 +94,24 @@ namespace AuthenticatorTray
                     Folders = data.Folders.ToList(),
                     CollapsedFolders = data.CollapsedFolders.Where(data.Folders.Contains).ToList()
                 };
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                var json = JsonSerializer.Serialize(accountsRoot, options);
-                // Write then swap so a crash can't leave a half-written file
+                var json = JsonSerializer.Serialize(accountsRoot, JsonOptions);
+                // Write, flush to disk, then swap so a crash can't leave a half-written file
                 string tempPath = accountsPath + ".tmp";
-                File.WriteAllText(tempPath, json);
-                File.Move(tempPath, accountsPath, true);
+                try
+                {
+                    using (var stream = new FileStream(tempPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                    using (var writer = new StreamWriter(stream))
+                    {
+                        writer.Write(json);
+                        writer.Flush();
+                        stream.Flush(flushToDisk: true);
+                    }
+                    File.Move(tempPath, accountsPath, overwrite: true);
+                }
+                finally
+                {
+                    if (File.Exists(tempPath)) File.Delete(tempPath);
+                }
                 return true;
             }
             catch (Exception ex)

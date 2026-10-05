@@ -1,9 +1,11 @@
+using System.ComponentModel;
 namespace AuthenticatorTray
 {
     public class ModernPopupForm : RoundedForm
     {
+        private const int WS_EX_TOOLWINDOW = 0x00000080;
         // Suppresses close-on-deactivate while a dialog opened from the popup is showing
-        [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+        [DesignerSerializationVisibility(DesignerSerializationVisibility.Hidden)]
         public bool KeepOpen { get; set; }
         public ModernPopupForm()
         {
@@ -15,7 +17,7 @@ namespace AuthenticatorTray
             get
             {
                 CreateParams cp = base.CreateParams;
-                cp.ExStyle |= 0x00000080; // WS_EX_TOOLWINDOW
+                cp.ExStyle |= WS_EX_TOOLWINDOW; // Keeps the popup out of Alt+Tab
                 return cp;
             }
         }
