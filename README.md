@@ -1,192 +1,146 @@
-# Eric's Super Duper Secure Auth™ 🔐
+# Authenticator Tray 🔐
 
-> *Because who needs Google Authenticator when you can roll your own sketchy system tray app?*
+A small Windows system tray app that shows your TOTP two-factor codes, built with WinForms on .NET 9.
 
-## What is this monstrosity?
+> *Because I was tired of reaching for my phone.*
 
-Welcome to the most "enterprise-grade" 2FA authenticator you've ever seen! This beautiful piece of software engineering is a Windows system tray application that generates TOTP codes. It's like Google Authenticator, but with 100% more hardcoded values and 0% architectural patterns!
+Left-click the tray icon and every code is right there, ticking down. Click one and it's on your clipboard.
 
-## Features That Will Make You Question Everything
+## Features
 
-- ✨ **Single-file architecture** - Exactly 1337 lines of pure, unadulterated chaos in one massive Program.cs!
-- 🎨 **"Modern" UI** - Rounded corners! Subtle shadows! It's basically the next macOS!
-- 📱 **Actually Responsive Design** - Uses em units and screen percentages like a real web developer!
-- 🔒 **Security First** - All your secrets are safely embedded as resources (what could go wrong?)
-- 🚀 **Blazing Fast** - Updates every 500ms whether you need it or not!
-- 💾 **Memory Efficient** - Calls `GC.Collect()` manually because long-running tray apps need love too!
-- 🎯 **Production Ready** - Contains helpful comments like `// Better vertical centering`
-- ⚙️ **QR Code Scanning** - Add new accounts on the fly! Just scan a QR code and edit the fields before adding!
-- ✏️ **Editable Fields** - Review and modify account name, secret, digits, and algorithm before saving
-- 🔍 **Smart QR Detection** - Automatically scales up small QR codes for reliable decoding
-- 🎭 **Single Instance** - Prevents running multiple copies because we're not savages
+- **Tray popup with live codes** - all accounts at a glance, refreshed continuously, with a shared countdown that turns orange at 10s and red at 5s.
+- **Click to copy** - click a card (or its 📋 button) to copy the current code.
+- **Folders** - group accounts under collapsible folder headers; the collapsed state is remembered.
+- **Multi-column layout** - once the list would grow past 80% of the screen height, the popup spreads into balanced columns instead of scrolling forever.
+- **Per-monitor DPI aware** - layout scales with the display, so text stays crisp on high-DPI screens.
+- **Right-click a card** to move it to a folder (including a new one) or remove it.
+- **Settings window** (⚙️ in the popup header):
+  - add an account by scanning a QR code image (`otpauth://` URL), with all fields editable before saving, or by entering the details manually
+  - create, rename and delete folders, assign accounts to folders, remove accounts
+- **Single instance** - launching it twice just tells you it's already running.
+- **Algorithms** - SHA1, SHA256 and SHA512; 6-8 digits; 30-second period.
 
-## Installation
+Right-click the tray icon to exit.
 
-### Step 1: Export Your 2FA Accounts from Google Authenticator
+## Requirements
 
-1. Open Google Authenticator on your phone
-2. Tap the three-dot menu (⋮) in the top right
-3. Select **"Export accounts"** or **"Transfer accounts"**
-4. Choose **"Export accounts"** and select the accounts you want to export
-5. Google Authenticator will display a QR code containing all your accounts
-6. **Take a screenshot** of the QR code
+- Windows
+- [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) to build
+- Python 3.6+ (optional, only for the Google Authenticator import scripts)
 
-### Step 2: Add the QR Code Image to the Repository
+## Build
 
-1. Save the screenshot as `img.png` in the root directory of this repository (same folder as `setup.py`)
-2. Make sure the image is clearly visible and the QR code is not cropped or distorted
+`accounts.json` is embedded into the executable at build time, so it must exist before building. Create it from the example (or with `{ "accounts": [] }`):
 
-### Step 3: Run the Setup Script
+```powershell
+copy accounts.json.example accounts.json
+```
 
-1. Open a terminal/command prompt in the repository root directory
-2. Run the setup script:
-   ```bash
-   python setup.py
-   ```
+Debug/Release build:
 
-   The script will:
-   - Install required Python dependencies (protobuf, pyzbar, Pillow)
-   - Generate the protobuf file needed for parsing migration URLs
-   - Decode the QR code from `img.png`
-   - Extract all your 2FA accounts
-   - Create `accounts.json` in the `csharp-tray/AuthenticatorTray/` directory
-   - If `accounts.json` already exists, it will create `updated_accounts.json` instead
+```powershell
+dotnet build -c Release
+```
 
-### Step 4: Build and Run the Application
+Self-contained single-file executable:
 
-1. Navigate to the C# project directory:
-   ```bash
-   cd AuthenticatorTray
-   ```
+```powershell
+dotnet publish -c Release -r win-x64 -p:PublishSingleFile=true -p:SelfContained=true
+```
 
-2. Build the project:
-   ```bash
-   dotnet publish -c Release -r win-x64 /p:PublishSingleFile=true /p:SelfContained=true
-   ```
+The result is `bin\Release\net9.0-windows\win-x64\publish\AuthenticatorTray.exe`. Drop it anywhere, and add it to your Startup folder if you want it running at logon.
 
-### Usage
+## Accounts
 
-- **Left-click** the tray icon to show all your 2FA codes
-- **Right-click** the tray icon to exit the application
-- **Click the settings icon (⚙️)** in the popup header to add new accounts via QR code
-- Codes update automatically every second
+### Where `accounts.json` is loaded from
 
-## Configuration
+1. `accounts.json` in the same folder as the executable.
+2. If that file doesn't exist, the copy embedded in the exe at build time.
 
-The `accounts.json` file is automatically generated by the setup script from your Google Authenticator export. However, if you need to manually create or edit it, use this format:
+Changes made in the app (adding, removing, moving, folders) are saved to `accounts.json` next to the executable. If that file exists but can't be parsed, the app falls back to the embedded copy in read-only mode and refuses to save, so a broken file is never overwritten.
+
+### Format
 
 ```json
 {
   "accounts": [
     {
-      "name": "Your Bank Account (totally safe)",
-      "secret": "DEFINITELY_NOT_YOUR_REAL_SECRET",
+      "name": "GitHub (me@example.com)",
+      "secret": "JBSWY3DPEHPK3PXP",
+      "digits": 6,
+      "algorithm": "SHA1",
+      "folder": "Work"
+    },
+    {
+      "name": "Blizzard (mysupercoolusername)",
+      "secret": "JBSWY3DPEHPK3PXP",
       "digits": 6,
       "algorithm": "SHA1"
     }
-  ]
+  ],
+  "folders": ["Work", "Games"],
+  "collapsedFolders": ["Games"]
 }
 ```
 
-*Note: This file is in .gitignore because we learned about security the hard way.*
+| Field | Description |
+| --- | --- |
+| `name` | Display name; must be unique. |
+| `secret` | Base32 secret key. |
+| `digits` | Code length, 6-8 (default 6). |
+| `algorithm` | `SHA1` (default), `SHA256` or `SHA512`. |
+| `folder` | Optional folder name. Folders referenced here are created automatically. |
+| `folders` | Optional; folder display order. |
+| `collapsedFolders` | Optional; folders shown collapsed in the popup. |
 
-### Adding New Accounts via UI
+## Importing from Google Authenticator
 
-**The Easy Way (Recommended):**
+Google Authenticator's **Transfer accounts > Export accounts** shows a QR code holding an `otpauth-migration://` URL with all selected accounts. The Python helpers in this repo turn that into `accounts.json`:
 
-1. When setting up 2FA on a website (e.g., Microsoft, GitHub, etc.), they'll show you a QR code
-2. **Take a screenshot** of the QR code (or save it as an image file)
-3. **Left-click** the tray icon to open the popup
-4. **Click the settings icon (⚙️)** in the popup header
-5. Click **"📷 Scan QR Code from Image"**
-6. Select your screenshot/image file
-7. **Review and edit** the decoded information:
-   - **Name**: The display name for the account
-   - **Secret**: The Base32-encoded secret key
-   - **Digits**: Code length (usually 6, sometimes 7 or 8)
-   - **Algorithm**: Hash algorithm (SHA1, SHA256, SHA512, or MD5)
-8. Click **"Add Account"** when satisfied
-9. Done! The new account appears immediately - no rebuild needed!
+1. Screenshot the export QR code and save it as `img.png` next to `setup.py`.
+2. Run:
+   ```powershell
+   python setup.py
+   ```
+   This installs `protobuf`, `pyzbar` and `Pillow` if missing, generates `auth_migration_pb2.py` from `auth_migration.proto` (needs `grpcio-tools` or `protoc`), decodes the QR code and writes the accounts in the format above.
+3. The script writes to `csharp-tray/AuthenticatorTray/accounts.json` relative to itself (a leftover from an older repo layout), or `updated_accounts.json` if that file already exists. Move or merge the result into `accounts.json` in the project root.
 
-**Features:**
-- Automatic QR code detection with smart upscaling for small images
-- All fields are editable before saving
-- Input validation to prevent invalid configurations
-- Duplicate account detection with replace option
-- Account is automatically saved to `accounts.json` and persists across restarts
+Standalone helpers for doing it by hand:
 
-### Manual Account Entry
+- `decoder_qr.py` - prints the URL(s) encoded in `img.png`.
+- `decode_migration.py` - decodes an `otpauth-migration://` URL (set in the `url` variable) and prints each account's name, issuer, Base32 secret, digits and algorithm.
 
-If you prefer to manually add accounts instead of using the export or QR scanning:
-1. Copy the example file: `cp accounts.json.example accounts.json`
-2. Edit `accounts.json` and add your accounts with their TOTP secrets
-3. Each account needs: `name`, `secret` (base32 encoded), `digits` (usually 6), and `algorithm` (usually "SHA1")
-4. Restart the application to load the new accounts
+Codes from a regular single-account QR code (`otpauth://`) can be added directly in the app via Settings.
 
-## Architecture Highlights
+## Project structure
 
-### Design Patterns Used:
-- ❌ MVC
-- ❌ MVVM  
-- ❌ Repository Pattern
-- ❌ Dependency Injection
-- ✅ **The "Everything in Main" Pattern** (Patent Pending)
+```
+Program.cs                 Entry point: single-instance mutex, DPI mode, tray icon
+Forms/
+  TrayPopup.cs             The popup: cards, folder headers, columns, countdown, context menu
+  SettingsForm.cs          Add accounts, manage folders and accounts
+  InputForm.cs             Small text prompt (folder names)
+  RoundedForm.cs           Borderless rounded-corner base form
+  ModernPopupForm.cs       Popup window base
+Controls/MacCard.cs        Rounded account card
+Services/
+  AccountStore.cs          Load/save accounts.json (file or embedded fallback)
+  TotpService.cs           Code generation via Otp.NET
+  QrCodeService.cs         QR decoding (ZXing.Net) and otpauth:// parsing
+Models/                    Account, AccountData, and the JSON shapes
+Helpers/
+  ColumnLayout.cs          Balanced multi-column packing
+  UiScale.cs               DPI-aware sizing and fonts
+  GraphicsExtensions.cs    Rounded-rectangle drawing
+setup.py, decoder_qr.py,
+decode_migration.py,
+auth_migration.proto       Google Authenticator import helpers
+```
 
-### Code Quality Features:
-- **CSS-like Units**: `Em(4.2f)` and `ScreenWidth(22)` - we're basically web developers now!
-- **Inline Event Handlers**: Because separating concerns is overrated
-- **Custom Graphics Extensions**: Why use existing UI frameworks when you can draw rounded rectangles manually?
-- **Global State**: Static methods everywhere, just like the good old days!
-- **DPI Awareness**: `Application.SetHighDpiMode(HighDpiMode.PerMonitorV2)` - look how fancy we are!
+## Security
 
-## Known "Features"
+This is a convenience tool for personal use, not a hardened vault.
 
-### Fixed ✅
-- 🎉 ~~Hardcoded window positioning~~ Now uses screen percentages like a pro!
-- 🎉 ~~Blurry text~~ Crystal clear DPI-aware rendering!
-- 🎉 ~~Terrible scaling~~ Responsive em-based layout system!
-- 🎉 ~~Need to rebuild to add accounts~~ Just scan a QR code and you're done!
-- 🎉 ~~Can't edit account info before saving~~ All fields are now editable!
-- 🎉 ~~No QR code validation~~ Smart scaling and comprehensive error messages!
-- 🎉 ~~Multiple app instances running~~ Single-instance protection enabled!
-
-### Still "Features" 🐛
-- 🐛 No error handling for malformed JSON (crashes are features!)
-- 🐛 Thread safety is for enterprise applications
-- 🐛 No unit tests (testing is for people who don't believe in their code)
-
-## FAQ
-
-**Q: Why does this exist?**  
-A: I was tired of using my phone.
-
-**Q: Is this secure?**  
-A: As secure as storing your passwords in a text file named "definitely_not_passwords.txt"
-
-**Q: Can I use this in production?**  
-A: You *can* do many things. Should you? That's between you and your conscience.
-
-**Q: Why is everything in one file?**  
-A: Microservices are overrated. We're bringing back the monolith, one giant Program.cs at a time.
-
-**Q: Why does it look like macOS?**  
-A: Don't flatter me, it looks like shit.
-
-## Contributing
-
-Found a bug? Great! Here's how you can help:
-
-1. ~~Fork the repository~~
-2. ~~Create a feature branch~~
-3. ~~Write tests~~
-4. Just edit Program.cs directly and add more inline code. It's the way.
-
-## License
-
-This code is released under the "Please Don't Use This In Production" license. 
-
-Use at your own risk. I'm not responsible for any security breaches, mental breakdowns, or existential crises that may result from reading or using this code.
-
----
-
-*"It works on my machine!" - Eric S, 2025*
+- `accounts.json` stores secrets in **plain text**. It is gitignored; keep it that way.
+- The build embeds `accounts.json` into the executable as a fallback, so **the exe contains your secrets**. Don't share or publish it.
+- Anyone with access to your Windows account can read your codes. Keeping 2FA on the same machine as your passwords is a trade-off you should make knowingly.
