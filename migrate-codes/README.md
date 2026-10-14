@@ -8,7 +8,7 @@ Google Authenticator exports accounts as a QR code containing an `otpauth-migrat
 | --- | --- |
 | `setup.py` | All-in-one: checks dependencies, generates the protobuf module, decodes `img.png` and writes `accounts.json`. |
 | `decoder_qr.py` | Prints the URL(s) encoded in `img.png`. |
-| `decode_migration.py` | Decodes one `otpauth-migration://` URL and prints each account. |
+| `decode_migration.py` | Decodes one `otpauth-migration://` URL (argument or hidden prompt) into `accounts.json`-style JSON. |
 | `auth_migration.proto` | Protobuf schema of the migration payload. |
 
 ## 1. Prerequisites
@@ -49,20 +49,21 @@ It can be run from any directory. It decodes `img.png` (plain `otpauth://` codes
 
 ### Option B: step by step
 
-Run these from inside `migrate-codes/`, since they look for `img.png` and `auth_migration_pb2.py` in the current directory:
+Print the URL from the QR image (run from inside `migrate-codes/`, since it looks for `img.png` in the current directory):
 
 ```powershell
 cd migrate-codes
 python decoder_qr.py
 ```
 
-This prints the `otpauth-migration://...` URL. Paste it into the `url` variable at the top of `decode_migration.py`, then:
+Then decode it. Run without arguments and paste the URL at the hidden prompt, which keeps it out of your shell history:
 
 ```powershell
-python decode_migration.py
+python decode_migration.py                          # prints accounts.json-style JSON
+python decode_migration.py -o updated_accounts.json # writes it to a file instead
 ```
 
-Each account is printed with its name, issuer, Base32 secret, digits and algorithm (`1` = SHA1, `2` = SHA256, `3` = SHA512). Copy the values into `accounts.json` by hand.
+Passing the URL as an argument (`python decode_migration.py "otpauth-migration://..."`) also works, but leaves it in shell history. HOTP accounts are skipped, since the app only supports TOTP. The script never overwrites an existing output file.
 
 ## 4. Merge into the app
 
@@ -81,5 +82,6 @@ Delete `updated_accounts.json` once merged.
 Once the accounts work in the app:
 
 - delete `img.png` and the screenshot on your phone (and any cloud photo backup of it),
-- delete any copies of the `otpauth-migration://` URL, including the one pasted into `decode_migration.py`,
+- delete any copies of the `otpauth-migration://` URL (and clear it from shell history if you passed it as an argument),
+- never commit the URL, the QR image or a file containing secrets,
 - delete `updated_accounts.json` if you created one.
