@@ -3,8 +3,20 @@ namespace AuthenticatorTray
 {
     static class TotpService
     {
-        public static int SecondsRemaining() => 30 - (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() % 30);
-        public static string ComputeCode(Account acc) => new Totp(Base32Encoding.ToBytes(acc.Secret), step: 30, totpSize: acc.Digits).ComputeTotp();
-        public static string FormatCode(string code) => code.Length == 6 ? $"{code.Substring(0, 3)} {code.Substring(3, 3)}" : code;
+        const int StepSeconds = 30;
+        public static int SecondsRemaining() => StepSeconds - (int)(DateTimeOffset.UtcNow.ToUnixTimeSeconds() % StepSeconds);
+        public static string ComputeCode(Account acc) =>
+            new Totp(Base32Encoding.ToBytes(NormalizeSecret(acc.Secret)), step: StepSeconds, mode: HashMode(acc.Algorithm), totpSize: acc.Digits).ComputeTotp();
+        public static string FormatCode(string code) => code.Length == 6 ? $"{code[..3]} {code[3..]}" : code;
+        // Authenticator apps often show secrets grouped with spaces or dashes, in lowercase
+        static string NormalizeSecret(string secret) =>
+            string.Concat(secret.Where(c => !char.IsWhiteSpace(c) && c != '-')).TrimEnd('=').ToUpperInvariant();
+        // Otp.NET has no MD5 mode, so MD5 keeps the previous SHA1 behaviour
+        static OtpHashMode HashMode(string? algorithm) => algorithm?.Trim().ToUpperInvariant() switch
+        {
+            "SHA256" => OtpHashMode.Sha256,
+            "SHA512" => OtpHashMode.Sha512,
+            _ => OtpHashMode.Sha1
+        };
     }
 }

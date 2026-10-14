@@ -1,4 +1,8 @@
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 using ZXing;
+using ZXing.Common;
 namespace AuthenticatorTray
 {
     static class QrCodeService
@@ -11,138 +15,34 @@ namespace AuthenticatorTray
             }
             try
             {
-                // Load the image
-                using (var originalBitmap = new Bitmap(imagePath))
+                using var originalBitmap = new Bitmap(imagePath);
+                var reader = new BarcodeReaderGeneric
                 {
-                    // Ensure we have valid dimensions
-                    if (originalBitmap.Width <= 0 || originalBitmap.Height <= 0)
+                    Options = new DecodingOptions
                     {
-                        throw new Exception($"Invalid image dimensions: {originalBitmap.Width}x{originalBitmap.Height}");
+                        TryHarder = true,
+                        TryInverted = true,
+                        PossibleFormats = new List<BarcodeFormat> { BarcodeFormat.QR_CODE }
                     }
-                    // Try multiple scales if the image is small
-                    List<int> scalesToTry = new List<int>();
-                    if (originalBitmap.Width < 300 || originalBitmap.Height < 300)
+                };
+                // Small images decode better when upscaled first
+                int[] scales = originalBitmap.Width < 300 || originalBitmap.Height < 300 ? new[] { 3, 2, 1 } : new[] { 1 };
+                foreach (int scale in scales)
+                {
+                    int width = originalBitmap.Width * scale;
+                    int height = originalBitmap.Height * scale;
+                    using var bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
+                    using (var graphics = Graphics.FromImage(bitmap))
                     {
-                        scalesToTry.AddRange(new[] { 3, 2, 1 }); // Try 3x, 2x, then original
+                        graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+                        graphics.PixelOffsetMode = PixelOffsetMode.Half;
+                        graphics.DrawImage(originalBitmap, 0, 0, width, height);
                     }
-                    else
+                    var result = reader.Decode(new RGBLuminanceSource(ToGrayscale(bitmap), width, height, RGBLuminanceSource.BitmapFormat.Gray8));
+                    if (result != null)
                     {
-                        scalesToTry.Add(1); // Just try original size
+                        return result.Text;
                     }
-                    foreach (int scale in scalesToTry)
-                    {
-                        int width = originalBitmap.Width * scale;
-                        int height = originalBitmap.Height * scale;
-                        // Convert to RGB24 format for consistent processing
-                        using (var bitmap = new Bitmap(width, height, System.Drawing.Imaging.PixelFormat.Format24bppRgb))
-                        {
-                            using (var graphics = Graphics.FromImage(bitmap))
-                            {
-                                graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                                graphics.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
-                                graphics.DrawImage(originalBitmap, 0, 0, width, height);
-                            }
-                        var reader = new BarcodeReaderGeneric();
-                        var options = new ZXing.Common.DecodingOptions
-                        {
-                            TryHarder = true,
-                            TryInverted = true,
-                            PossibleFormats = new List<ZXing.BarcodeFormat>
-                            {
-                                ZXing.BarcodeFormat.QR_CODE
-                            }
-                        };
-                        reader.Options = options;
-                        // Method 1: Try with RGB24 format
-                        var bitmapData = bitmap.LockBits(
-                            new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                            System.Drawing.Imaging.ImageLockMode.ReadOnly,
-                            System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-                        try
-                        {
-                            int stride = Math.Abs(bitmapData.Stride);
-                            int bytes = stride * bitmap.Height;
-                            byte[] rgbValues = new byte[bytes];
-                            System.Runtime.InteropServices.Marshal.Copy(bitmapData.Scan0, rgbValues, 0, bytes);
-                            var luminanceSource = new ZXing.RGBLuminanceSource(
-                                rgbValues,
-                                bitmap.Width,
-                                bitmap.Height,
-                                ZXing.RGBLuminanceSource.BitmapFormat.RGB24);
-                            var result = reader.Decode(luminanceSource);
-                            if (result != null)
-                            {
-                                return result.Text;
-                            }
-                            // Try inverted
-                            var invertedSource = new ZXing.InvertedLuminanceSource(luminanceSource);
-                            result = reader.Decode(invertedSource);
-                            if (result != null)
-                            {
-                                return result.Text;
-                            }
-                        }
-                        finally
-                        {
-                            bitmap.UnlockBits(bitmapData);
-                        }
-                        // Method 2: Try with grayscale conversion
-                        // Re-lock bits to get RGB data for grayscale conversion
-                        var bitmapData2 = bitmap.LockBits(
-                            new Rectangle(0, 0, bitmap.Width, bitmap.Height),
-                            System.Drawing.Imaging.ImageLockMode.ReadOnly,
-                            System.Drawing.Imaging.PixelFormat.Format24bppRgb);
-                        try
-                        {
-                            int stride2 = Math.Abs(bitmapData2.Stride);
-                            int bytes2 = stride2 * bitmap.Height;
-                            byte[] rgbValues2 = new byte[bytes2];
-                            System.Runtime.InteropServices.Marshal.Copy(bitmapData2.Scan0, rgbValues2, 0, bytes2);
-                            // Convert RGB24 to grayscale manually
-                            int grayWidth = bitmap.Width;
-                            int grayHeight = bitmap.Height;
-                            byte[] grayValues = new byte[grayWidth * grayHeight];
-                            // Convert RGB to grayscale using luminance formula
-                            for (int y = 0; y < grayHeight; y++)
-                            {
-                                for (int x = 0; x < grayWidth; x++)
-                                {
-                                    int rgbIndex = (y * stride2) + (x * 3);
-                                    if (rgbIndex + 2 < rgbValues2.Length)
-                                    {
-                                        byte r = rgbValues2[rgbIndex + 2];     // BGR order
-                                        byte g = rgbValues2[rgbIndex + 1];
-                                        byte b = rgbValues2[rgbIndex];
-                                        // Luminance formula: 0.299*R + 0.587*G + 0.114*B
-                                        byte gray = (byte)((r * 77 + g * 150 + b * 29) >> 8);
-                                        grayValues[y * grayWidth + x] = gray;
-                                    }
-                                }
-                            }
-                            var grayLuminanceSource = new ZXing.RGBLuminanceSource(
-                                grayValues,
-                                grayWidth,
-                                grayHeight,
-                                ZXing.RGBLuminanceSource.BitmapFormat.Gray8);
-                            var grayResult = reader.Decode(grayLuminanceSource);
-                            if (grayResult != null)
-                            {
-                                return grayResult.Text;
-                            }
-                            // Try inverted grayscale
-                            var invertedGraySource = new ZXing.InvertedLuminanceSource(grayLuminanceSource);
-                            grayResult = reader.Decode(invertedGraySource);
-                            if (grayResult != null)
-                            {
-                                return grayResult.Text;
-                            }
-                        }
-                        finally
-                        {
-                            bitmap.UnlockBits(bitmapData2);
-                        }
-                    }
-                    } // End of foreach scale
                 }
             }
             catch (Exception ex)
@@ -150,6 +50,32 @@ namespace AuthenticatorTray
                 throw new Exception($"Failed to decode QR code: {ex.Message}", ex);
             }
             return null;
+        }
+        static byte[] ToGrayscale(Bitmap bitmap)
+        {
+            int width = bitmap.Width;
+            int height = bitmap.Height;
+            var bitmapData = bitmap.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
+            try
+            {
+                int stride = Math.Abs(bitmapData.Stride);
+                byte[] bgr = new byte[stride * height];
+                Marshal.Copy(bitmapData.Scan0, bgr, 0, bgr.Length);
+                byte[] gray = new byte[width * height];
+                for (int y = 0; y < height; y++)
+                {
+                    for (int x = 0; x < width; x++)
+                    {
+                        int i = y * stride + x * 3;
+                        gray[y * width + x] = (byte)((bgr[i + 2] * 77 + bgr[i + 1] * 150 + bgr[i] * 29) >> 8);
+                    }
+                }
+                return gray;
+            }
+            finally
+            {
+                bitmap.UnlockBits(bitmapData);
+            }
         }
         public static AccountJson? ParseOtpAuthUrl(string url)
         {
@@ -159,7 +85,7 @@ namespace AuthenticatorTray
                 {
                     return null;
                 }
-                if (!url.StartsWith("otpauth://"))
+                if (!url.StartsWith("otpauth://", StringComparison.Ordinal))
                 {
                     return null;
                 }
@@ -193,9 +119,9 @@ namespace AuthenticatorTray
                 string? issuer = queryParams.TryGetValue("issuer", out string? issuerValue) ? issuerValue : null;
                 string accountName = label;
                 // Parse label format: "Issuer:AccountName" or just "AccountName"
-                if (label.Contains(":"))
+                if (label.Contains(':'))
                 {
-                    var parts = label.Split(new[] { ':' }, 2);
+                    var parts = label.Split(':', 2);
                     if (parts.Length == 2)
                     {
                         if (string.IsNullOrEmpty(issuer))
@@ -222,7 +148,7 @@ namespace AuthenticatorTray
                 {
                     displayName = "Unknown";
                 }
-                string algorithm = queryParams.TryGetValue("algorithm", out string? algValue) ? algValue.ToUpper() : "SHA1";
+                string algorithm = queryParams.TryGetValue("algorithm", out string? algValue) ? algValue.ToUpperInvariant() : "SHA1";
                 if (algorithm != "SHA1" && algorithm != "SHA256" && algorithm != "SHA512" && algorithm != "MD5")
                 {
                     algorithm = "SHA1";
