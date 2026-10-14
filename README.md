@@ -26,7 +26,7 @@ Right-click the tray icon to exit.
 
 - Windows
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0) to build
-- Python 3.6+ (optional, only for the Google Authenticator import scripts)
+- Python 3.6+ (optional, only for the [import scripts](migrate-codes/README.md))
 
 ## Build
 
@@ -95,22 +95,9 @@ Changes made in the app (adding, removing, moving, folders) are saved to `accoun
 
 ## Importing from Google Authenticator
 
-Google Authenticator's **Transfer accounts > Export accounts** shows a QR code holding an `otpauth-migration://` URL with all selected accounts. The Python helpers in this repo turn that into `accounts.json`:
+Google Authenticator's export QR code (`otpauth-migration://`) can be converted into `accounts.json` with the Python scripts in [`migrate-codes/`](migrate-codes/README.md); see its README for step-by-step usage.
 
-1. Screenshot the export QR code and save it as `img.png` next to `setup.py`.
-2. Run:
-   ```powershell
-   python setup.py
-   ```
-   This installs `protobuf`, `pyzbar` and `Pillow` if missing, generates `auth_migration_pb2.py` from `auth_migration.proto` (needs `grpcio-tools` or `protoc`), decodes the QR code and writes the accounts in the format above.
-3. The script writes to `csharp-tray/AuthenticatorTray/accounts.json` relative to itself (a leftover from an older repo layout), or `updated_accounts.json` if that file already exists. Move or merge the result into `accounts.json` in the project root.
-
-Standalone helpers for doing it by hand:
-
-- `decoder_qr.py` - prints the URL(s) encoded in `img.png`.
-- `decode_migration.py` - decodes an `otpauth-migration://` URL (set in the `url` variable) and prints each account's name, issuer, Base32 secret, digits and algorithm.
-
-Codes from a regular single-account QR code (`otpauth://`) can be added directly in the app via Settings.
+Regular single-account QR codes (`otpauth://`) can be added directly in the app via Settings.
 
 ## Project structure
 
@@ -132,9 +119,7 @@ Helpers/
   ColumnLayout.cs          Balanced multi-column packing
   UiScale.cs               DPI-aware sizing and fonts
   GraphicsExtensions.cs    Rounded-rectangle drawing
-setup.py, decoder_qr.py,
-decode_migration.py,
-auth_migration.proto       Google Authenticator import helpers
+migrate-codes/             Google Authenticator import scripts (Python)
 ```
 
 ## Security

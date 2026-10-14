@@ -16,20 +16,21 @@ import re
 from pathlib import Path
 
 # Project paths
-PROJECT_ROOT = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).resolve().parent
 PROTO_FILE = PROJECT_ROOT / "auth_migration.proto"
 PROTO_PY_FILE = PROJECT_ROOT / "auth_migration_pb2.py"
-CSHARP_TRAY_DIR = PROJECT_ROOT / "csharp-tray" / "AuthenticatorTray"
+CSHARP_TRAY_DIR = PROJECT_ROOT.parent
 CSHARP_ACCOUNTS_JSON = CSHARP_TRAY_DIR / "accounts.json"
 CSHARP_ACCOUNTS_EXAMPLE = CSHARP_TRAY_DIR / "accounts.json.example"
 IMG_PNG = PROJECT_ROOT / "img.png"
 
 # Required Python packages (for QR decoding and protobuf)
-REQUIRED_PACKAGES = [
-    "protobuf",
-    "pyzbar",
-    "Pillow",
-]
+# pip name -> import name
+REQUIRED_PACKAGES = {
+    "protobuf": "google.protobuf",
+    "pyzbar": "pyzbar",
+    "Pillow": "PIL",
+}
 
 def check_python_version():
     """Check if Python version is 3.6+"""
@@ -42,9 +43,9 @@ def install_dependencies():
     """Install required Python packages"""
     print("\n📦 Checking and installing dependencies...")
     missing = []
-    for package in REQUIRED_PACKAGES:
+    for package, module in REQUIRED_PACKAGES.items():
         try:
-            __import__(package.replace("-", "_"))
+            __import__(module)
             print(f"  ✅ {package} is installed")
         except ImportError:
             missing.append(package)
@@ -360,7 +361,7 @@ def print_next_steps(accounts_exist, qr_processed=False):
         print("   ✅ accounts.json exists - ready to build!")
     else:
         print("   ⚠️  accounts.json not found")
-    print("   cd csharp-tray/AuthenticatorTray")
+    print(f"   cd {CSHARP_TRAY_DIR}")
     print("   dotnet build")
     print("   dotnet run")
     
